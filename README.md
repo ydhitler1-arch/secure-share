@@ -42,6 +42,7 @@ docker compose up -d --build
 
 Then open http://localhost:8000. To configure it, copy `.env.example` to `.env` and edit (compose reads it automatically): at minimum set `BASE_URL`, and `SMTP_*` to send real email.
 
+- **Prebuilt image**: pushing a version tag (`v1.2.3`) runs [docker-publish.yml](.github/workflows/docker-publish.yml), which publishes a multi-arch (amd64 and arm64) image to `ghcr.io/ydhitler1-arch/secure-share` tagged `1.2.3`, `1.2`, `1` and `latest`. You can also run the workflow by hand to publish `edge` (the current `main`).
 - **Persistence**: the database, encrypted files and session key live in the `secureshare-data` volume (`/data` in the container). `docker compose down` keeps it; `docker compose down -v` deletes everything.
 - **Server**: gunicorn with one worker and eight threads. Rate limits are in memory, so extra worker processes would each count separately; scale with threads, or move the limiter to Redis before adding workers.
 - **Hardening**: runs as an unprivileged user with a read-only root filesystem, no capabilities and `no-new-privileges`. Only `/data` is writable.
