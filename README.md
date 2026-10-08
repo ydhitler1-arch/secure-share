@@ -70,6 +70,14 @@ How it behaves:
 - If a local account with the same email already exists, Google is linked to it. If that account's email was **never verified**, its password is locked and its sessions are signed out. This stops someone who pre-registered another person's email from keeping access.
 - Accounts created through Google have no usable password; use "Forgot your password?" to set one if you also want password sign-in.
 
+### Sending email with Gmail
+
+1. Turn on 2-Step Verification for the Google account, then create an app password at https://myaccount.google.com/apppasswords (Google Workspace admins can disable these).
+2. Put the settings in a `.env` file next to `app.py` (git-ignored; `.env.example` shows the format): `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_TLS=starttls`, `SMTP_USER=you@gmail.com`, `SMTP_PASSWORD=<app password>`, `SMTP_FROM=SecureShare <you@gmail.com>`. The app reads `.env` on start; real environment variables take priority.
+3. Check it works with `python send_test_email.py you@gmail.com`, then restart the server.
+
+Gmail allows roughly 500 messages a day for a personal account and may send these to spam at first. For a public site a transactional email service (Brevo, Resend, Mailgun) is a better fit.
+
 ### Email in development
 
 If `SMTP_HOST` is not set, no email is sent: each message is appended to `outbox.log` (git-ignored) and printed to the server console, so you can copy the verification or reset link from there.

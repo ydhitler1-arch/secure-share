@@ -4,6 +4,8 @@ import os
 import re
 import time
 
+os.environ["SKIP_DOTENV"] = "1"  # never pick up a developer's real .env
+
 import app as m
 
 m.limiter.enabled = False

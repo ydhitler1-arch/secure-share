@@ -44,6 +44,20 @@ def env(name: str, default: str = "") -> str:
     return os.environ.get(name) or default
 
 
+def load_dotenv(path: Path) -> None:
+    """Minimal .env loader for local runs. Real environment variables win; Docker passes those instead."""
+    if os.environ.get("SKIP_DOTENV") or not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ.setdefault(key.strip(), value.strip().strip("\"'"))
+
+
+load_dotenv(BASE / ".env")
+
 # Everything the app writes (database, encrypted files, session key, dev mail) lives under DATA_DIR.
 DATA = Path(env("DATA_DIR", str(BASE)))
 STORAGE = DATA / "storage"
@@ -248,7 +262,7 @@ def send_message(to: str, subject: str, body: str):
         if env("SMTP_TLS", "starttls") == "starttls":
             server.starttls()
         if env("SMTP_USER"):
-            server.login(env("SMTP_USER"), env("SMTP_PASSWORD"))
+            server.login(env("SMTP_USER"), env("SMTP_PASSWORD").replace(" ", ""))
         server.send_message(msg)
 
 
