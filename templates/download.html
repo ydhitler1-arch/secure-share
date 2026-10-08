@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% block body %}
+<h1>Download file</h1>
+<p class="muted">Encrypted file &middot; {{ (f.size/1024)|round(1) }} KB &middot; {{ f.max_downloads - f.downloads }} download(s) left.<br>
+The name and contents are revealed only after decryption in your browser.</p>
+<form id="dl-form" data-blob-url="{{ url_for('download_blob', token=token) }}">
+<div id="pw-row" hidden><label>Password</label><input type="password" name="password" required autofocus></div>
+<button>Decrypt &amp; download</button></form>
+<p id="msg" class="muted"></p>
+<noscript><p class="err">JavaScript is required: decryption happens in your browser.</p></noscript>
+<script src="{{ url_for('static', filename='crypto.js') }}"></script>
+<script src="{{ url_for('static', filename='download.js') }}"></script>
+{% endblock %}

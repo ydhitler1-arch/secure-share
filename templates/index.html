@@ -1,0 +1,21 @@
+{% extends "base.html" %}{% block body %}
+<h1>SecureShare</h1>
+<p class="muted">End-to-end encrypted: your file is encrypted in this browser. The server never sees the file, its name or the key.</p>
+{% if limited %}<p class="muted">No account needed for quick sharing. <a href="/register">Create an account</a> and verify your email for longer expiry (up to 7 days), up to 100 downloads, and a dashboard of your files.</p>{% endif %}
+<form id="upload-form" data-max-mb="{{ max_mb }}">
+<label>File (max {{ max_mb }} MB)</label><input type="file" name="file" required>
+<label>Password (optional, extra protection on top of the link)</label><input type="password" name="password" autocomplete="new-password">
+<label>Expires after (hours, max {{ max_hours }})</label><input type="number" name="hours" value="{{ [24, max_hours]|min }}" min="0.1" max="{{ max_hours }}" step="any">
+<label>Max downloads (max {{ max_dl }})</label><input type="number" name="max_downloads" value="1" min="1" max="{{ max_dl }}">
+<button>Encrypt &amp; create link</button></form>
+<p id="status" class="muted"></p>
+<div id="result" hidden>
+<h2>Link ready</h2>
+<label>Share this link (the part after # is the key; send it whole)</label><code id="link"></code>
+<p id="meta" class="muted"></p>
+<label>Your private delete link (keep it)</label><code id="delete-link"></code>
+<p><a href="/">Share another</a>{% if current_user() %} &middot; <a href="/dashboard">Go to dashboard</a>{% endif %}</p></div>
+<noscript><p class="err">JavaScript is required: encryption happens in your browser.</p></noscript>
+<script src="{{ url_for('static', filename='crypto.js') }}"></script>
+<script src="{{ url_for('static', filename='upload.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,14 @@
+.git
+__pycache__/
+*.pyc
+secureshare.db
+secret.key
+outbox.log
+storage/
+test_app.py
+README.md
+.env
+.dockerignore
+Dockerfile
+docker-compose.yml
+.github

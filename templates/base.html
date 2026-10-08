@@ -1,0 +1,39 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>SecureShare</title>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+body{font:16px system-ui;background:#0f172a;color:#e2e8f0;margin:0;min-height:100vh}
+nav{display:flex;gap:1rem;align-items:center;padding:.8rem 1.2rem;background:#1e293b;border-bottom:1px solid #334155}
+nav .brand{font-weight:700;margin-right:auto}nav a{color:#e2e8f0;text-decoration:none}nav a:hover{color:#22c55e}
+nav form{margin:0}nav .linkbtn{margin:0;width:auto;padding:0;background:none;color:#94a3b8;font-weight:400}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;padding:2rem 1rem}
+main{background:#1e293b;padding:2rem;border-radius:12px;width:min(480px,100%);box-sizing:border-box}
+main.wide{width:min(900px,100%)}
+h1{margin-top:0}label{display:block;margin:.8rem 0 .2rem;font-size:.9rem;color:#94a3b8}
+input{width:100%;box-sizing:border-box;padding:.6rem;border-radius:6px;border:1px solid #334155;background:#0f172a;color:inherit}
+button{margin-top:1.2rem;width:100%;padding:.7rem;border:0;border-radius:6px;background:#22c55e;color:#04210f;font-weight:700;cursor:pointer}
+button.small{margin:0;width:auto;padding:.35rem .7rem;font-size:.85rem}
+button.danger{background:#ef4444;color:#fff}button.ghost{background:#334155;color:#e2e8f0}
+button:disabled{opacity:.6;cursor:default}
+code{word-break:break-all;display:block;background:#0f172a;padding:.6rem;border-radius:6px;margin:.3rem 0}
+.err{color:#f87171}.ok{color:#4ade80}.muted{color:#94a3b8;font-size:.9rem}a{color:#22c55e}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.8rem;margin:1rem 0}
+.stat{background:#0f172a;border-radius:8px;padding:.8rem}.stat b{display:block;font-size:1.5rem}
+.tablewrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.92rem}
+th,td{text-align:left;padding:.55rem .5rem;border-bottom:1px solid #334155;vertical-align:middle;white-space:nowrap}
+th{color:#94a3b8;font-weight:600}td form{display:inline;margin:0}.actions{display:flex;gap:.4rem}
+.flash{background:#14532d;padding:.6rem .8rem;border-radius:6px;margin-bottom:1rem}
+.warn{background:#713f12;padding:.6rem .8rem;border-radius:6px;margin-bottom:1rem}.warn a{color:#fde68a}
+.inline{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}.inline button{margin:0;width:auto}
+</style></head><body>
+<nav><a class="brand" href="/">SecureShare</a>
+{% if current_user() %}<a href="/">Share</a><a href="/dashboard">Dashboard</a>
+<a href="/account" class="muted">{{ current_user().username }}</a>
+<form method="post" action="/logout"><input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="linkbtn">Sign out</button></form>
+{% else %}<a href="/login">Sign in</a><a href="/register">Register</a>{% endif %}</nav>
+<div class="wrap"><main class="{% block mainclass %}{% endblock %}">
+{% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}
+{% if current_user() and not current_user().email_verified and request.endpoint != 'account' %}
+<div class="warn">{% if current_user().email %}Verify your email ({{ current_user().email }}) for higher sharing limits.
+{% else %}Add an email address for higher sharing limits.{% endif %} <a href="/account">Manage</a></div>{% endif %}
+{% block body %}{% endblock %}</main></div></body></html>

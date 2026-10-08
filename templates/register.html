@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% block body %}
+<h1>Create account</h1>
+<form method="post">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<label>Username (3-32 characters: letters, numbers, . _ -)</label>
+<input name="username" value="{{ username }}" required autofocus autocomplete="username" minlength="3" maxlength="32">
+<label>Email (we send a verification link)</label>
+<input type="email" name="email" value="{{ email }}" required autocomplete="email" maxlength="254">
+<label>Password (at least 8 characters)</label><input type="password" name="password" required minlength="8" autocomplete="new-password">
+<label>Confirm password</label><input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+<button>Create account</button></form>
+<p class="muted">Already registered? <a href="/login">Sign in</a></p>
+<p class="muted">Your account password only protects your dashboard. File encryption keys never reach the server.</p>{% endblock %}

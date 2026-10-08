@@ -1,0 +1,9 @@
+{% extends "base.html" %}{% block body %}
+<h1>Choose a new password</h1>
+<form method="post">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<label>New password (at least 8 characters)</label><input type="password" name="password" required minlength="8" autofocus autocomplete="new-password">
+<label>Confirm new password</label><input type="password" name="confirm" required minlength="8" autocomplete="new-password">
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+<button>Update password</button></form>
+<p class="muted">You'll be signed out everywhere and asked to sign in again. Files you've shared are unaffected: their encryption doesn't depend on your account password.</p>{% endblock %}

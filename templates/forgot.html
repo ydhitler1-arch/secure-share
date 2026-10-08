@@ -1,0 +1,8 @@
+{% extends "base.html" %}{% block body %}
+<h1>Reset password</h1>
+<p class="muted">Enter the email on your account and we'll send a link to choose a new password.</p>
+<form method="post">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+<label>Email</label><input type="email" name="email" required autofocus autocomplete="email">
+<button>Send reset link</button></form>
+<p class="muted"><a href="/login">Back to sign in</a></p>{% endblock %}

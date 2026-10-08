@@ -1,0 +1,23 @@
+{% extends "base.html" %}{% block body %}
+<h1>Account</h1>
+<p><b>{{ current_user().username }}</b></p>
+<p>Email: {% if current_user().email %}<b>{{ current_user().email }}</b>
+{% if current_user().email_verified %}<span class="ok">verified</span>{% else %}<span class="err">not verified</span>{% endif %}
+{% else %}<span class="err">none on file</span>{% endif %}</p>
+
+{% if current_user().email and not current_user().email_verified %}
+<form method="post" class="inline">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="resend">
+<button class="ghost">Resend verification email</button></form>
+<p class="muted">Links expire after 24 hours. Check your spam folder if it doesn't arrive.</p>
+{% endif %}
+
+<h2>{{ "Change email" if current_user().email else "Add email" }}</h2>
+<form method="post">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}"><input type="hidden" name="action" value="change">
+<label>New email</label><input type="email" name="email" required autocomplete="email" maxlength="254">
+<label>Current password</label><input type="password" name="password" required autocomplete="current-password">
+{% if error %}<p class="err">{{ error }}</p>{% endif %}
+<button>Save and verify</button></form>
+<p class="muted">Changing your email requires verifying the new address to keep the higher sharing limits.</p>
+{% endblock %}

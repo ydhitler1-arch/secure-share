@@ -1,0 +1,39 @@
+services:
+  secureshare:
+    build: .
+    image: secureshare:latest
+    restart: unless-stopped
+    ports:
+      # Bound to localhost only. Put a TLS-terminating reverse proxy in front for real use.
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - secureshare-data:/data
+    environment:
+      # Public URL used in verification / reset emails. Required for anything other than localhost.
+      BASE_URL: ${BASE_URL:-http://localhost:8000}
+      # Set both to 1 when running behind an HTTPS reverse proxy.
+      SECURE_COOKIES: ${SECURE_COOKIES:-}
+      TRUST_PROXY: ${TRUST_PROXY:-}
+      # Anonymous storage quotas, in MB.
+      ANON_IP_QUOTA_MB: ${ANON_IP_QUOTA_MB:-100}
+      ANON_TOTAL_QUOTA_MB: ${ANON_TOTAL_QUOTA_MB:-1024}
+      # Outgoing email. Leave SMTP_HOST empty to write emails to /data/outbox.log instead of sending.
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_TLS: ${SMTP_TLS:-starttls}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      # Optional: fixed session signing key (otherwise generated once and kept in the volume).
+      SECRET_KEY: ${SECRET_KEY:-}
+    # Hardening: read-only image filesystem, no extra privileges. Only /data is writable.
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  secureshare-data:

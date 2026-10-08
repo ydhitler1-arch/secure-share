@@ -1,0 +1,7 @@
+master.key
+secureshare.db
+storage/
+__pycache__/
+secret.key
+outbox.log
+.env

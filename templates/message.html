@@ -1,0 +1,4 @@
+{% extends "base.html" %}{% block body %}
+<h1>{{ title }}</h1>
+<p class="{{ 'ok' if ok else 'err' }}">{{ text }}</p>
+<p>{% if link %}<a href="{{ link[0] }}">{{ link[1] }}</a>{% elif current_user() %}<a href="/dashboard">Go to dashboard</a>{% else %}<a href="/login">Sign in</a>{% endif %}</p>{% endblock %}

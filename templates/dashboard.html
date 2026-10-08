@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% block mainclass %}wide{% endblock %}{% block body %}
+<h1>Your dashboard</h1>
+<div class="stats">
+<div class="stat"><b>{{ stats.active }}</b><span class="muted">active files</span></div>
+<div class="stat"><b>{{ stats.bytes|kb }}</b><span class="muted">stored (encrypted)</span></div>
+<div class="stat"><b>{{ stats.downloads }}</b><span class="muted">downloads used</span></div>
+</div>
+<p><a href="/"><button class="small" type="button">Share a new file</button></a></p>
+
+<h2>Active files</h2>
+{% if files %}
+<div class="tablewrap"><table id="files">
+<thead><tr><th>File</th><th>Size</th><th>Created</th><th>Expires</th><th>Downloads</th><th></th></tr></thead>
+<tbody>
+{% for f in files %}
+<tr data-token="{{ f.token }}">
+<td class="fname muted">Encrypted</td>
+<td>{{ f.size|kb }}</td>
+<td><time data-ts="{{ f.created_at }}">{{ f.created_at|dt }}</time></td>
+<td><time data-ts="{{ f.expires_at }}">{{ f.expires_at|dt }}</time></td>
+<td>{{ f.downloads }} / {{ f.max_downloads }}</td>
+<td class="actions">
+<button class="small ghost copy" type="button" hidden>Copy link</button>
+<form method="post" action="/dashboard/delete/{{ f.token }}" class="del-form">
+<input type="hidden" name="_csrf" value="{{ csrf_token() }}"><button class="small danger">Delete</button></form>
+</td></tr>
+{% endfor %}
+</tbody></table></div>
+<p class="muted">File names and share links are not stored on the server. This browser remembers the names and links of files you uploaded here, so you can copy them again; files uploaded from another browser show as "Encrypted".</p>
+{% else %}<p class="muted">No active files. Expired and fully downloaded files are removed automatically.</p>{% endif %}
+
+<h2>Recent activity</h2>
+{% if activity %}
+<div class="tablewrap"><table>
+<thead><tr><th>When</th><th>Event</th><th>File</th></tr></thead><tbody>
+{% for a in activity %}
+<tr><td><time data-ts="{{ a.ts }}">{{ a.ts|dt }}</time></td><td>{{ a.event }}</td>
+<td class="muted act-file" data-token="{{ a.token }}">{{ a.token[:8] }}...</td></tr>
+{% endfor %}</tbody></table></div>
+{% else %}<p class="muted">Nothing yet.</p>{% endif %}
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+{% endblock %}
