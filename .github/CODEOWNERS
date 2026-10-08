@@ -1,0 +1,15 @@
+# Code owners are automatically requested for review on pull requests that touch their files.
+# The last matching pattern wins. See https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+*                               @ydhitler1-arch
+
+# Security-sensitive areas: add more reviewers here as the project grows
+/static/crypto.js               @ydhitler1-arch
+/app.py                         @ydhitler1-arch
+/SECURITY.md                    @ydhitler1-arch
+
+# Build, release and automation
+/.github/                       @ydhitler1-arch
+/Dockerfile                     @ydhitler1-arch
+/docker-compose.yml             @ydhitler1-arch
