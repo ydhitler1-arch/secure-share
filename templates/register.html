@@ -1,5 +1,7 @@
 {% extends "base.html" %}{% block body %}
 <h1>Create account</h1>
+{% if google_enabled() %}<a class="gbtn" href="/auth/google">Continue with Google</a>
+<p class="muted center">or use a password</p>{% endif %}
 <form method="post">
 <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
 <label>Username (3-32 characters: letters, numbers, . _ -)</label>

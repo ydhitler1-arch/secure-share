@@ -24,6 +24,9 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      # Optional: Sign in with Google (see README).
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       # Optional: fixed session signing key (otherwise generated once and kept in the volume).
       SECRET_KEY: ${SECRET_KEY:-}
     # Hardening: read-only image filesystem, no extra privileges. Only /data is writable.

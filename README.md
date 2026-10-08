@@ -16,6 +16,7 @@ End-to-end encrypted file sharing with controlled access. Files are encrypted in
 - **User accounts**: optional. They add a dashboard of your files, activity log and the higher limits; downloading never needs an account, only the link. Passwords are hashed with scrypt, sessions use signed HttpOnly SameSite cookies, and all state-changing requests are CSRF-protected.
 - **Email verification**: registration requires an email and sends a single-use link (24 h). Verifying unlocks the higher limits. You can resend the link or change your email (needs your password, and re-verifies) on the Account page.
 - **Password reset**: "Forgot your password?" emails a single-use link (1 h). The page gives the same answer whether or not the address has an account, and a successful reset signs out every existing session. Tokens are stored only as SHA-256 hashes, with a 60-second per-account resend cooldown.
+- **Sign in with Google** (optional): "Continue with Google" on the sign-in and register pages. Google vouches for the email address, so these accounts are verified immediately. Turned on by setting a Google client ID and secret.
 - **Dashboard**: your active files (size, created, expiry, downloads used), totals, and a recent-activity log of uploads, downloads and deletions, with one-click delete.
 - **Expiring links**: 6 minutes up to 7 days.
 - **Download limits**: 1 to 100 downloads, then the file is deleted.
@@ -50,6 +51,21 @@ Then open http://localhost:8000. To configure it, copy `.env.example` to `.env` 
 - **Health**: `/healthz` returns `ok`; the image has a built-in healthcheck.
 - **Backups**: back up the whole volume (database and `storage/` must be kept together).
 
+### Sign in with Google
+
+Optional. The button appears once `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are set.
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/), create a project, then **APIs & Services → OAuth consent screen** (External) and fill in the app name and your email. The scopes used are `openid`, `email` and `profile`.
+2. **Credentials → Create credentials → OAuth client ID → Web application.** Under **Authorized redirect URIs** add `<BASE_URL>/auth/google/callback`, for example `https://share.example.com/auth/google/callback`, or `http://localhost:5000/auth/google/callback` for local development (then browse via `localhost`, not `127.0.0.1`, so the addresses match).
+3. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (in `.env` for Docker) and restart. While the consent screen is in *Testing* mode only the test users you list can sign in; publish it to let anyone in.
+
+How it behaves:
+
+- It uses the OAuth authorization-code flow with PKCE and a one-time `state` value. The app reads only Google's user ID, name and verified email address, and nothing else.
+- A new Google user gets an account that is already email-verified (so it gets the higher limits right away). The username is taken from the email.
+- If a local account with the same email already exists, Google is linked to it. If that account's email was **never verified**, its password is locked and its sessions are signed out. This stops someone who pre-registered another person's email from keeping access.
+- Accounts created through Google have no usable password; use "Forgot your password?" to set one if you also want password sign-in.
+
 ### Email in development
 
 If `SMTP_HOST` is not set, no email is sent: each message is appended to `outbox.log` (git-ignored) and printed to the server console, so you can copy the verification or reset link from there.
@@ -64,6 +80,7 @@ All optional environment variables:
 | `TRUST_PROXY=1` | Trust one reverse proxy's `X-Forwarded-*` headers (real client IP for quotas and rate limits). Only set this behind a proxy. |
 | `BASE_URL` | Public site URL used in email links, e.g. `https://share.example.com`. **Required when not served on localhost**: links are never built from the request's Host header, to prevent reset-link poisoning. |
 | `ANON_IP_QUOTA_MB` (100), `ANON_TOTAL_QUOTA_MB` (1024) | Storage quotas for anonymous-tier uploads: per IP, and all anonymous files together. |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Enable "Continue with Google" (see above). |
 | `SMTP_HOST`, `SMTP_PORT` (587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | Outgoing mail server. |
 | `SMTP_TLS` | `starttls` (default) or `ssl` (port 465). |
 | `SECRET_KEY` | Session signing key (otherwise generated in `secret.key`). |

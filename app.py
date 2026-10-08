@@ -11,9 +11,11 @@ Accounts: you must be signed in to upload. Downloading needs only the link.
 The server enforces expiry and download limits and keeps an audit log that
 owners can see on their dashboard.
 """
+import base64
 import functools
 import hashlib
 import io
+import json
 import os
 import re
 import secrets
@@ -21,6 +23,9 @@ import smtplib
 import sqlite3
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from datetime import datetime, timezone
 from email.message import EmailMessage
 from pathlib import Path
@@ -59,6 +64,9 @@ VERIFY_TTL = 24 * 3600
 RESET_TTL = 3600
 TOKEN_COOLDOWN = 60  # seconds between emails of the same kind for one account
 OUTBOX_PATH = DATA / "outbox.log"
+GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo"
 # Verified against when a username does not exist, so timing doesn't reveal valid usernames.
 DUMMY_HASH = generate_password_hash("dummy-password-for-timing")
 
@@ -115,12 +123,13 @@ def db() -> sqlite3.Connection:
         for table, col, decl in (("blobs", "user_id", "INTEGER"), ("audit", "user_id", "INTEGER"),
                                  ("users", "email", "TEXT"),
                                  ("users", "email_verified", "INTEGER NOT NULL DEFAULT 0"),
-                                 ("users", "session_version", "INTEGER NOT NULL DEFAULT 0"),
+                                 ("users", "session_version", "INTEGER NOT NULL DEFAULT 0"), ("users", "google_sub", "TEXT"),
                                  ("blobs", "anon", "INTEGER NOT NULL DEFAULT 0"), ("blobs", "uploader_ip", "TEXT")):
             cols = [r["name"] for r in g.db.execute(f"PRAGMA table_info({table})")]
             if col not in cols:
                 g.db.execute(f"ALTER TABLE {table} ADD COLUMN {col} {decl}")
         g.db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_users_email ON users(email COLLATE NOCASE)")
+        g.db.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_users_google ON users(google_sub)")
         g.db.commit()
     return g.db
 
@@ -447,6 +456,106 @@ def login():
         return render_template("login.html", error="Wrong username or password.", next=request.form.get("next", ""),
                                username=username), 401
     return render_template("login.html", error=None, next=nxt, username="")
+
+
+# ---------- Sign in with Google (OAuth 2.0 authorization code flow + PKCE) ----------
+def google_enabled() -> bool:
+    return bool(env("GOOGLE_CLIENT_ID") and env("GOOGLE_CLIENT_SECRET"))
+
+
+app.jinja_env.globals["google_enabled"] = google_enabled
+
+
+def http_json(url: str, data=None, headers=None) -> dict:
+    """POST (when data is given) or GET a URL and parse the JSON reply. Separate so tests can replace it."""
+    body = urllib.parse.urlencode(data).encode() if data is not None else None
+    req = urllib.request.Request(url, data=body, headers=headers or {})
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.load(resp)
+
+
+def google_redirect_uri() -> str:
+    return base_url() + url_for("google_callback")
+
+
+@app.get("/auth/google")
+@limiter.limit("30 per hour")
+def google_login():
+    if not google_enabled():
+        abort(404)
+    state = secrets.token_urlsafe(32)
+    verifier = secrets.token_urlsafe(64)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+    session["g_state"], session["g_verifier"] = state, verifier
+    session["g_next"] = safe_next(request.args.get("next", ""))
+    query = urllib.parse.urlencode({
+        "client_id": env("GOOGLE_CLIENT_ID"), "redirect_uri": google_redirect_uri(), "response_type": "code",
+        "scope": "openid email profile", "state": state, "code_challenge": challenge,
+        "code_challenge_method": "S256", "prompt": "select_account"})
+    return redirect(f"{GOOGLE_AUTH_URL}?{query}")
+
+
+def username_from(email: str, name: str = "") -> str:
+    base = re.sub(r"[^A-Za-z0-9_.-]", "", email.split("@")[0])[:24]
+    if len(base) < 3:
+        base = (re.sub(r"[^A-Za-z0-9_.-]", "", name)[:24] + "user")[:24]
+    candidate = base
+    while db().execute("SELECT 1 FROM users WHERE username=?", (candidate,)).fetchone():
+        candidate = f"{base}{secrets.randbelow(10000):04d}"
+    return candidate
+
+
+def google_fail(message: str, status: int = 400):
+    return render_template("message.html", title="Google sign-in failed", text=message, ok=False,
+                           link=("/login", "Back to sign in")), status
+
+
+@app.get("/auth/google/callback")
+@limiter.limit("30 per hour")
+def google_callback():
+    if not google_enabled():
+        abort(404)
+    state, verifier = session.pop("g_state", None), session.pop("g_verifier", None)
+    nxt = session.pop("g_next", None) or url_for("dashboard")
+    if request.args.get("error"):
+        return google_fail("Google sign-in was cancelled or refused.")
+    if not state or not verifier or not secrets.compare_digest(request.args.get("state", ""), state):
+        return google_fail("The sign-in request expired or didn't match. Please try again.")
+    code = request.args.get("code")
+    if not code:
+        return google_fail("Google didn't return a sign-in code.")
+    try:
+        token = http_json(GOOGLE_TOKEN_URL, data={
+            "client_id": env("GOOGLE_CLIENT_ID"), "client_secret": env("GOOGLE_CLIENT_SECRET"), "code": code,
+            "code_verifier": verifier, "redirect_uri": google_redirect_uri(), "grant_type": "authorization_code"})
+        info = http_json(GOOGLE_USERINFO_URL, headers={"Authorization": "Bearer " + token["access_token"]})
+    except (urllib.error.URLError, KeyError, ValueError, OSError):
+        return google_fail("Couldn't complete sign-in with Google. Please try again.", 502)
+
+    sub, email = str(info.get("sub") or ""), str(info.get("email") or "").strip().lower()
+    if not sub or not email or info.get("email_verified") is not True:
+        return google_fail("Your Google account doesn't have a verified email address, so we can't use it to sign in.")
+
+    user = db().execute("SELECT * FROM users WHERE google_sub=?", (sub,)).fetchone()
+    if user is None:
+        user = db().execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+        if user is not None:
+            # Link Google to the existing account. If its email was never verified, someone else may have
+            # registered it (and knows its password), so lock the password and sign out its sessions.
+            if not user["email_verified"]:
+                db().execute("UPDATE users SET password_hash=?, session_version=session_version+1 WHERE id=?",
+                             (generate_password_hash(secrets.token_urlsafe(32)), user["id"]))
+            db().execute("UPDATE users SET google_sub=?, email_verified=1 WHERE id=?", (sub, user["id"]))
+        else:
+            cur = db().execute(
+                "INSERT INTO users(username,email,email_verified,google_sub,password_hash,created_at) VALUES(?,?,1,?,?,?)",
+                (username_from(email, str(info.get("name") or "")), email, sub,
+                 generate_password_hash(secrets.token_urlsafe(32)), time.time()))  # unusable until they reset it
+            user = db().execute("SELECT * FROM users WHERE id=?", (cur.lastrowid,)).fetchone()
+        db().commit()
+        user = db().execute("SELECT * FROM users WHERE id=?", (user["id"],)).fetchone()
+    start_session(user["id"], user["session_version"])
+    return redirect(safe_next(nxt))
 
 
 @app.post("/logout")

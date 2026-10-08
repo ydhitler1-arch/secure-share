@@ -1,5 +1,6 @@
 """Server-side tests. Encryption itself is browser-side (static/crypto.js)."""
 import io
+import os
 import re
 import time
 
@@ -256,6 +257,123 @@ try:
     assert anon_up(anon, "10.0.0.4").status_code == 507
 finally:
     m.ANON_IP_QUOTA, m.ANON_TOTAL_QUOTA = old_ip, old_total
+# --- Sign in with Google (Google's servers are replaced by a fake)
+import base64
+import hashlib
+import urllib.error
+import urllib.parse
+
+real_http_json = m.http_json
+assert anon.get("/auth/google").status_code == 404                                # off until configured
+assert "Continue with Google" not in anon.get("/login").get_data(as_text=True)
+os.environ["GOOGLE_CLIENT_ID"], os.environ["GOOGLE_CLIENT_SECRET"] = "test-client-id", "test-client-secret"
+assert "Continue with Google" in anon.get("/login").get_data(as_text=True)
+assert "Continue with Google" in anon.get("/register").get_data(as_text=True)
+
+
+def google_signin(c, info, nxt=None, code="good-code"):
+    """Runs the whole flow; returns the callback response."""
+    r = c.get("/auth/google" + (f"?next={nxt}" if nxt else ""))
+    assert r.status_code == 302
+    q = urllib.parse.parse_qs(urllib.parse.urlparse(r.headers["Location"]).query)
+    assert r.headers["Location"].startswith(m.GOOGLE_AUTH_URL)
+    assert q["client_id"] == ["test-client-id"] and q["code_challenge_method"] == ["S256"]
+    assert q["redirect_uri"] == ["http://localhost/auth/google/callback"] and "email" in q["scope"][0]
+
+    def fake(url, data=None, headers=None):
+        if url == m.GOOGLE_TOKEN_URL:
+            assert data["code"] == "good-code" and data["client_secret"] == "test-client-secret"
+            challenge = base64.urlsafe_b64encode(hashlib.sha256(data["code_verifier"].encode()).digest()).rstrip(b"=")
+            assert challenge.decode() == q["code_challenge"][0]                     # PKCE verifier matches
+            assert data["redirect_uri"] == q["redirect_uri"][0]
+            return {"access_token": "tok"}
+        assert url == m.GOOGLE_USERINFO_URL and headers["Authorization"] == "Bearer tok"
+        return info
+
+    m.http_json = fake
+    return c.get("/auth/google/callback", query_string={"state": q["state"][0], "code": code})
+
+
+def info(sub, email, verified=True, name="Test Person"):
+    return {"sub": sub, "email": email, "email_verified": verified, "name": name}
+
+
+def user_row(email):
+    with m.app.app_context():
+        return m.db().execute("SELECT * FROM users WHERE email=?", (email,)).fetchone()
+
+
+# a brand-new Google user is created, verified, and gets the verified-account limits
+dave = new_client()
+r = google_signin(dave, info("sub-dave", "dave.smith@example.com"))
+assert r.status_code == 302 and r.headers["Location"].endswith("/dashboard")
+row = user_row("dave.smith@example.com")
+assert row["email_verified"] == 1 and row["google_sub"] == "sub-dave" and row["username"] == "dave.smith"
+j = dave.post("/upload", data={"blob": (io.BytesIO(BLOB), "d"), "hours": "100"}, content_type="multipart/form-data",
+              headers={"X-CSRF-Token": csrf(dave, "/dashboard")}).get_json()
+assert j["hours"] == 100
+assert not any(s[0] == "dave.smith@example.com" for s in sent)                    # no verification email needed
+# signing in again with the same Google account reuses the user (even if the email changed on Google's side)
+again = new_client()
+assert google_signin(again, info("sub-dave", "renamed@example.com")).status_code == 302
+assert again.get("/dashboard").status_code == 200
+with m.app.app_context():
+    assert m.db().execute("SELECT COUNT(*) FROM users WHERE google_sub='sub-dave'").fetchone()[0] == 1
+# a Google-only account has no usable password
+assert sign_in(new_client(), "dave.smith", "anything-at-all").status_code == 401
+# username collisions get a suffix
+other = new_client()
+google_signin(other, info("sub-dave2", "dave.smith@other.org"))
+assert user_row("dave.smith@other.org")["username"] not in ("dave.smith", "")
+
+# unverified Google email, missing email, user cancelling and bad state are all refused
+n_users = lambda: m.sqlite3.connect(m.DB_PATH).execute("SELECT COUNT(*) FROM users").fetchone()[0]
+before = n_users()
+assert google_signin(new_client(), info("sub-x", "x@example.com", verified=False)).status_code == 400
+assert google_signin(new_client(), {"sub": "sub-y"}).status_code == 400
+c = new_client()
+c.get("/auth/google")
+assert c.get("/auth/google/callback", query_string={"state": "forged", "code": "good-code"}).status_code == 400
+assert new_client().get("/auth/google/callback", query_string={"state": "x", "code": "y"}).status_code == 400
+assert c.get("/auth/google/callback", query_string={"error": "access_denied"}).status_code == 400
+assert n_users() == before
+
+
+def broken(url, data=None, headers=None):
+    raise urllib.error.URLError("google unreachable")
+
+
+c = new_client()
+q = urllib.parse.parse_qs(urllib.parse.urlparse(c.get("/auth/google").headers["Location"]).query)
+m.http_json = broken
+assert c.get("/auth/google/callback", query_string={"state": q["state"][0], "code": "good-code"}).status_code == 502
+# the state is single-use
+assert c.get("/auth/google/callback", query_string={"state": q["state"][0], "code": "good-code"}).status_code == 400
+
+# open redirect through ?next= is neutralised
+r = google_signin(new_client(), info("sub-dave", "dave.smith@example.com"), nxt="//evil.example")
+assert "evil.example" not in r.headers["Location"]
+
+# account takeover protection: linking to an UNVERIFIED local account locks the squatter out
+carol_squatter = new_client()
+assert register(carol_squatter, "carol", email="carol@example.com").status_code == 302
+assert carol_squatter.get("/dashboard").status_code == 200
+real_carol = new_client()
+assert google_signin(real_carol, info("sub-carol", "carol@example.com")).status_code == 302
+assert user_row("carol@example.com")["email_verified"] == 1 and user_row("carol@example.com")["google_sub"] == "sub-carol"
+assert carol_squatter.get("/dashboard").status_code == 302                          # squatter's session is dead
+assert sign_in(new_client(), "carol", "correct-horse").status_code == 401           # squatter's password is dead
+assert real_carol.get("/dashboard").status_code == 200
+
+# linking to a VERIFIED local account keeps its password
+assert google_signin(new_client(), info("sub-bob", "bob@example.com")).status_code == 302
+assert user_row("bob@example.com")["google_sub"] == "sub-bob"
+assert sign_in(new_client(), "bob", "brand-new-pass").status_code == 302
+
+m.http_json = real_http_json
+del os.environ["GOOGLE_CLIENT_ID"], os.environ["GOOGLE_CLIENT_SECRET"]
+assert anon.get("/auth/google").status_code == 404
+
 # --- deployment helpers
 assert anon.get("/healthz").get_data(as_text=True) == "ok"
 assert m.env("DEFINITELY_NOT_SET_VAR", "fallback") == "fallback"

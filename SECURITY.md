@@ -24,6 +24,7 @@ The project's core promise is that **the server never learns file contents, file
 - anything that exposes plaintext, names or keys to the server, its logs, or a third party (including leaking the `#fragment` key in requests, referrers or error output),
 - flaws in the browser-side encryption in `static/crypto.js` (key handling, nonce reuse, weak key derivation, tampering that is not detected),
 - authentication and session problems: login, registration, sessions, CSRF, open redirects,
+- Sign in with Google weaknesses: state or PKCE bypasses, account linking or takeover, trusting unverified Google emails,
 - email verification or password reset weaknesses: token guessing or reuse, account enumeration, Host-header poisoning, session survival after a reset,
 - access-control problems: one user reading or deleting another user's files or activity,
 - bypasses of expiry, download limits, rate limits or the anonymous storage quotas,
