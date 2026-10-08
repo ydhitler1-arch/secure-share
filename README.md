@@ -1,5 +1,9 @@
 # SecureShare
 
+[![Tests](https://github.com/ydhitler1-arch/secure-share/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/ydhitler1-arch/secure-share/actions/workflows/tests.yml)
+[![Release](https://img.shields.io/github/v/release/ydhitler1-arch/secure-share)](https://github.com/ydhitler1-arch/secure-share/releases)
+[![License: MIT](https://img.shields.io/github/license/ydhitler1-arch/secure-share)](LICENSE)
+
 End-to-end encrypted file sharing with controlled access. Files are encrypted in the sender's browser, so the server only ever stores unreadable bytes: it never sees the file, its name, or the key.
 
 | Share a file | Your dashboard |
