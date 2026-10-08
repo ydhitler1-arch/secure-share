@@ -124,7 +124,7 @@ This covers the server: registration and login rules, password hashing, email ve
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests and how to report security issues.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and tests. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## License
 

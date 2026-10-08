@@ -4,9 +4,7 @@ Thanks for helping out! Bug reports, fixes, docs and focused features are all we
 
 ## Reporting security issues
 
-Please **don't** open a public issue for a vulnerability. Use GitHub's private reporting instead: the repository's **Security** tab, then **Report a vulnerability**. Include what you found, how to reproduce it and what an attacker could do.
-
-Things that matter most here: anything that lets the server (or anyone without the link) read file contents, names or keys; authentication, session, CSRF, password-reset or email-verification bypasses; and quota or rate-limit bypasses.
+Please **don't** open a public issue for a vulnerability. Report it privately through the repository's **Security** tab (**Report a vulnerability**). The full policy, including what is in scope, is in [SECURITY.md](SECURITY.md).
 
 ## Getting set up
 
