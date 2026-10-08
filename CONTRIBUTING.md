@@ -64,7 +64,7 @@ The README explains the encryption design. Two rules keep it honest:
 ### Style notes
 
 - Python: standard library first, small functions, type hints where they help, comments that explain *why*.
-- Keep new dependencies to a minimum; this project deliberately has two.
+- Keep new dependencies to a minimum; this project deliberately has two. Dependabot opens weekly pull requests for Python packages, GitHub Actions and the Docker base image; they need the same green CI as any other change.
 - Anything user-facing that depends on an environment variable should be documented in the README configuration table and be safe when the variable is empty.
 - UI changes should work on narrow (phone-width) screens and not need inline scripts or external resources.
 
