@@ -122,6 +122,10 @@ This covers the server: registration and login rules, password hashing, email ve
 - **Development server**: `python app.py` uses Flask's built-in server. For real deployments use the Docker setup (gunicorn) or another production WSGI server, behind HTTPS, and use a shared store (such as Redis) for rate limiting instead of the in-memory default.
 - **Deleting is a GET link**: the delete link is a secret URL; anyone who has it can delete the file.
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, tests and how to report security issues.
+
 ## License
 
 [MIT](LICENSE)
