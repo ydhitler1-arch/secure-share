@@ -15,7 +15,7 @@ This is a volunteer-maintained project, so responses are best-effort. You can ex
 
 ## Supported versions
 
-Only the latest commit on `main` is supported. There are no versioned releases yet, so fixes land on `main`.
+Only the latest release (currently 1.x) and the tip of `main` are supported. Fixes land on `main` first and are released as new patch versions.
 
 ## What is in scope
 
