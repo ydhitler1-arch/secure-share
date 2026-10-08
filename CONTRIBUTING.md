@@ -57,7 +57,7 @@ The README explains the encryption design. Two rules keep it honest:
 1. Open an issue first for anything larger than a small fix, so we can agree on the approach.
 2. Branch from `main`, keep the change focused, and match the style of the code around it.
 3. Add or update tests for behaviour changes. Security fixes should come with a test that fails without the fix.
-4. Update the README if you change features, configuration or limits.
+4. Update the README if you change features, configuration or limits. Add a line under **Unreleased** in `CHANGELOG.md` for anything users would notice.
 5. Run `python test_app.py` and, if you touched the Docker setup, `docker compose up --build`.
 6. Open a pull request describing **what** changed and **why**, and how you tested it.
 

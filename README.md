@@ -142,7 +142,7 @@ This covers the server: registration and login rules, password hashing, email ve
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and tests. To report a vulnerability, see [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup and tests, and [CHANGELOG.md](CHANGELOG.md) for what changed in each release. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ## License
 
