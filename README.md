@@ -117,3 +117,7 @@ This covers the server: registration and login rules, password hashing, email ve
 - **No password recovery**: a lost link key or password means the file cannot be recovered.
 - **Development server**: `python app.py` uses Flask's built-in server. For real deployments use the Docker setup (gunicorn) or another production WSGI server, behind HTTPS, and use a shared store (such as Redis) for rate limiting instead of the in-memory default.
 - **Deleting is a GET link**: the delete link is a secret URL; anyone who has it can delete the file.
+
+## License
+
+[MIT](LICENSE)
