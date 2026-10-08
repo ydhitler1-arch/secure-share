@@ -2,6 +2,8 @@
 
 End-to-end encrypted file sharing with controlled access. Files are encrypted in the sender's browser, so the server only ever stores unreadable bytes: it never sees the file, its name, or the key.
 
+![SecureShare upload page](docs/screenshot.png)
+
 ## Features
 
 - **End-to-end encryption**: AES-256-GCM via the browser's Web Crypto API.

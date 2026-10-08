@@ -13,3 +13,4 @@ Dockerfile
 docker-compose.yml
 .github
 LICENSE
+docs
